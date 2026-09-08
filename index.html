@@ -63,13 +63,7 @@ button.secondary{background:#252932;color:#fff;border:1px solid #343945}
 
 <script>
 const KEY="training_ai_records";
-const sample=[
- {id:1,date:"2026-09-05",part:"胸・腕",intensity:"重め"},
- {id:2,date:"2026-09-05",part:"脚・体幹",intensity:"軽め"},
- {id:3,date:"2026-09-06",part:"背中",intensity:"軽め"},
- {id:4,date:"2026-09-07",part:"胸・腕",intensity:"軽め"},
- {id:5,date:"2026-09-08",part:"休み",intensity:"軽め"}
-];
+const sample=[];
 function load(){let x=localStorage.getItem(KEY);return x?JSON.parse(x):sample}
 function save(x){localStorage.setItem(KEY,JSON.stringify(x))}
 function todayString(){let d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
