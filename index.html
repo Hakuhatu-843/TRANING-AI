@@ -58,7 +58,7 @@ button.secondary{background:#252932;color:#fff;border:1px solid #343945}
 <div id="history"></div>
 </div>
 
-<div class="card"><button class="secondary" onclick="resetSample()">サンプルデータに戻す</button></div>
+
 </div>
 
 <script>
@@ -89,7 +89,6 @@ function render(){
  <button class="secondary delete" onclick="removeRecord('${x.id}')">削除</button></div>`).join("")}
  </div>`).join("");
 }
-function resetSample(){save(sample);render();document.getElementById("result").style.display="none"}
 
 /*
   判定ルール
@@ -135,12 +134,11 @@ function recommend(){
      const x=records.filter(r=>r.part===part||r.part==="全身").sort((a,b)=>b.date.localeCompare(a.date))[0];
      return x?diffDays(today,x.date):999;
    }
-   choice=[...candidates].sort((a,b)=>daysSince(b)-daysSince(a))[0];
-   const days=daysSince(choice);
-   reason=days===999
-    ?"この部位はまだ記録がないため、バランスを取る目的でおすすめしています。"
-    :`最後のトレーニングから${days}日空いており、休養期間を確保できています。`;
-   if(latest&&latest.part===choice)reason="同じ部位の連続を避け、十分な休養期間を確保するための候補から選びました。";
+   const sortedCandidates=[...candidates].sort((a,b)=>daysSince(b)-daysSince(a));
+   choice=sortedCandidates.join(" か ");
+   reason=sortedCandidates.length===1
+    ? `${sortedCandidates[0]}は休養期間を満たしているため、おすすめしています。`
+    : `${sortedCandidates.join("、")}はいずれも休養期間を満たしているため、この中から選べます。`;
  }
  document.getElementById("recommendation").textContent=choice;
  document.getElementById("reason").textContent=reason;
