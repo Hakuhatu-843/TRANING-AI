@@ -53,6 +53,7 @@ function draw(){
  $("progress").textContent=step.name==="セット間休憩"?"次のセットまで休憩":"30秒トレーニング → 5秒休憩 → 30秒トレーニング";
 }
 function start(){
+ if(index>=steps.length)reset();
  if(running)return;
  running=true;paused=false;$("start").disabled=true;$("pause").disabled=false;$("pause").textContent="一時停止";
  interval=setInterval(()=>{
