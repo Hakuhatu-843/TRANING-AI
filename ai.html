@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Training AI</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101216;color:#f5f7fa;font-family:system-ui,-apple-system,sans-serif}
+.container{max-width:680px;margin:auto;padding:20px 16px 45px}h1{margin:4px 0;font-size:28px}.sub{color:#9299a6;font-size:14px;margin-bottom:20px}
+.card{background:#191c22;border:1px solid #292d36;border-radius:18px;padding:18px;margin-bottom:14px}
+h2{font-size:17px;margin:0 0 14px}label{display:block;color:#aeb4bf;font-size:13px;margin:10px 0 6px}
+input,select,button{width:100%;border:0;border-radius:12px;padding:13px;font-size:15px}
+input,select{background:#252932;color:#fff;border:1px solid #343945}button{background:#f3f4f6;color:#111;font-weight:700;cursor:pointer}
+button.secondary{background:#252932;color:#fff;border:1px solid #343945}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.result{display:none;background:#20242c;border-radius:15px;padding:17px;margin-top:14px}
+.recommend{font-size:25px;font-weight:800;margin:5px 0 10px}.reason{color:#c4c9d2;line-height:1.65;font-size:14px}.recommend-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.recommend-links a{display:none;flex:1;min-width:120px;text-align:center;text-decoration:none;background:#f3f4f6;color:#111;font-weight:700;padding:12px;border-radius:12px;font-size:13px}
+.record{padding:12px 0;border-bottom:1px solid #292d36}.record:last-child{border-bottom:0}
+.recordTop{display:flex;justify-content:space-between;align-items:center}.date{font-size:13px;color:#8f96a3}.part{font-weight:700;margin-top:2px}
+.tag{display:inline-block;background:#292e38;border-radius:999px;padding:4px 8px;font-size:11px;margin-left:5px}
+.delete{width:auto;padding:7px 10px;font-size:12px}.empty{color:#777f8d;font-size:14px}.small{font-size:12px;color:#777f8d;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🏋️ Training AI</h1>
+<div class="sub">記録したトレーニングから、今日のおすすめを判断</div>
+
+<div class="card">
+<h2>🤖 今日のトレーニング</h2>
+<button onclick="recommend()">おすすめを判断する</button>
+<div class="result" id="result">
+<div style="color:#9da5b2;font-size:13px">TODAY'S RECOMMENDATION</div>
+<div class="recommend" id="recommendation"></div>
+<div class="reason" id="reason"></div><div class="recommend-links" id="recommendLinks"><a id="chestLink" href="/Push-up/">CHEST &amp; ARMを開く</a><a id="legLink" href="/LEG-CORE/index-1.html">LEG &amp; COREを開く</a></div>
+</div>
+</div>
+
+<div class="card">
+<h2>📝 トレーニングを記録</h2>
+<label>日付</label>
+<input type="date" id="date">
+<div class="row">
+<div><label>部位</label>
+<select id="part">
+<option>胸・腕</option><option>背中</option><option>脚</option><option>体幹</option><option>全身</option><option>休み</option>
+</select></div>
+<div><label>負荷</label>
+<select id="intensity">
+<option>重め</option><option>軽め</option></select>
+</div>
+</div>
+<button style="margin-top:14px" onclick="addRecord()">このトレーニングを追加</button>
+<div class="small">※同じ日でも何個でも追加できます。</div>
+</div>
+
+<div class="card">
+<h2>📅 トレーニング履歴</h2>
+<div id="history"></div>
+</div>
+
+
+</div>
+
+<script>
+const KEY="training_ai_records";
+const sample=[];
+function load(){let x=localStorage.getItem(KEY);return x?JSON.parse(x):sample}
+function save(x){localStorage.setItem(KEY,JSON.stringify(x))}
+function todayString(){let d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+document.getElementById("date").value=todayString();
+
+function addRecord(){
+ const date=document.getElementById("date").value,part=document.getElementById("part").value,intensity=document.getElementById("intensity").value;
+ if(!date)return;
+ let r=load();
+ r.push({id:Date.now()+Math.random(),date,part,intensity});
+ save(r);render();document.getElementById("result").style.display="none";
+}
+function removeRecord(id){save(load().filter(r=>String(r.id)!==String(id)));render()}
+function render(){
+ const r=load().sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id)));
+ const box=document.getElementById("history");
+ if(!r.length){box.innerHTML='<div class="empty">まだ記録がありません。</div>';return}
+ const groups={};r.forEach(x=>(groups[x.date]??=[]).push(x));
+ box.innerHTML=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>`
+ <div class="record"><div class="recordTop"><div class="date">${date}</div></div>
+ ${groups[date].map(x=>`<div class="recordTop" style="margin-top:9px">
+ <div><span class="part">${x.part}</span><span class="tag">${x.intensity}</span></div>
+ <button class="secondary delete" onclick="removeRecord('${x.id}')">削除</button></div>`).join("")}
+ </div>`).join("");
+}
+
+/*
+  判定ルール
+  軽め: 実施日を含めて翌日のみ休養 → 2日後から可能
+  重め: 実施日を含めて翌々日まで休養 → 3日後から可能
+  全身: 全部位に同じ休養期間を適用
+  同じ日に複数記録がある場合は、各部位の中で最も長い休養期間を採用
+*/
+function diffDays(a,b){
+ return Math.round((new Date(a+"T00:00:00")-new Date(b+"T00:00:00"))/86400000);
+}
+function recommend(){
+ const today=todayString(), records=load().filter(r=>r.date<=today);
+ const parts=["胸・腕","背中","脚","体幹"];
+ const blockedUntil={};
+ parts.forEach(p=>blockedUntil[p]=null);
+
+ // 各記録から「その部位が再開可能になる日」を計算
+ records.forEach(r=>{
+   if(r.part==="休み")return;
+   const gap=r.intensity==="軽め"?2:3;
+   const d=new Date(r.date+"T00:00:00");d.setDate(d.getDate()+gap);
+   if(r.part==="全身"){
+     parts.forEach(p=>{if(!blockedUntil[p]||d>blockedUntil[p])blockedUntil[p]=d});
+   }else if(parts.includes(r.part)){
+     if(!blockedUntil[r.part]||d>blockedUntil[r.part])blockedUntil[r.part]=d;
+   }
+ });
+
+ const candidates=parts.filter(p=>!blockedUntil[p]||new Date(today+"T00:00:00")>=blockedUntil[p]);
+ const latest=records.filter(r=>r.part!=="休み").sort((a,b)=>b.date.localeCompare(a.date))[0];
+ const recentRest=records.some(r=>r.part==="休み"&&r.date===today);
+
+ let choice,reason;
+
+ if(candidates.length===0){
+   choice="休み";
+   reason="今日はすべての部位が休養期間中です。無理にトレーニングせず、休みをおすすめします。";
+ }else{
+   // 最近の全身トレーニング直後は候補が全てブロックされる設計。
+   // 候補の中では最後に実施してから最も日数が経った部位を優先。
+   function daysSince(part){
+     const x=records.filter(r=>r.part===part||r.part==="全身").sort((a,b)=>b.date.localeCompare(a.date))[0];
+     return x?diffDays(today,x.date):999;
+   }
+   const sortedCandidates=[...candidates].sort((a,b)=>daysSince(b)-daysSince(a));
+   choice=sortedCandidates.join(" か ");
+   reason=sortedCandidates.length===1
+    ? `${sortedCandidates[0]}は休養期間を満たしているため、おすすめしています。`
+    : `${sortedCandidates.join("、")}はいずれも休養期間を満たしているため、この中から選べます。`;
+ }
+ document.getElementById("recommendation").textContent=choice;
+ document.getElementById("reason").textContent=reason;
+ const chestLink=document.getElementById("chestLink"), legLink=document.getElementById("legLink");
+ chestLink.style.display=sortedRecommendationTargets(choice).includes("chest")?"block":"none";
+ legLink.style.display=sortedRecommendationTargets(choice).includes("leg")?"block":"none";
+ document.getElementById("result").style.display="block";
+}
+function sortedRecommendationTargets(choice){
+ const targets=[];
+ if(choice.includes("胸・腕"))targets.push("chest");
+ if(choice.includes("脚")||choice.includes("体幹"))targets.push("leg");
+ return targets;
+}
+render();
+</script>
+</body>
+</html>
